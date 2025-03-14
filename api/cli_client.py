@@ -4,6 +4,21 @@ import json
 import os
 from typing import Dict, Any
 
+# Available AI Models
+AVAILABLE_MODELS = [
+    "gemini-2.0-flash",          # Fast response streaming model
+    "gemini-2.0-flash-lite",     # Lightweight version
+    "gemini-2.0-pro-exp-02-05",  # Experimental Pro model
+    "gemini-2.0-flash-thinking-exp-01-21",  # Thinking model
+    "gemini-2.0-flash-exp",      # Experimental flash model
+    "learnlm-1.5-pro-experimental",  # Learning model
+    "gemini-1.5-pro",            # Stable Gemini 1.5
+    "gemini-1.5-flash",          # Fast Gemini 1.5
+    "gemini-1.5-flash-8b"        # 8B parameter version
+]
+
+DEFAULT_MODEL = "gemini-2.0-flash"
+
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
@@ -43,13 +58,9 @@ def ask_question(question: str, model: str = None) -> None:
             print(f"\n❌ Error: {result['error']}")
             return
             
-        # Don't show response for empty questions (model switching/initialization)
-        if not question.strip():
-            return
-            
         if 'response' in result:
             formatted_response = ' '.join(result['response'].split())
-            model_name = result.get('model_used', 'gemini-2.0-flash')  # Default to gemini-2.0-flash
+            model_name = result.get('model_used', DEFAULT_MODEL)
             print(f"\n🤖 AI Response ({model_name}): {formatted_response}")
             
     except requests.exceptions.RequestException as e:
@@ -67,15 +78,21 @@ def handle_command(command: str) -> tuple[bool, str | None]:
         return True, None
     elif command.startswith('/switch '):
         model = command.split(' ')[1].strip()
-        print(f"\n🔄 Switching to model: {model}")
-        ask_question("", model)
+        if model not in AVAILABLE_MODELS:
+            print(f"\n❌ Invalid model. Available models:")
+            for m in AVAILABLE_MODELS:
+                print(f"  - {m}")
+            return True, None
         return True, model
     elif cmd == '/help':
         print("\nAvailable Commands:")
         print("  /help           - Show this help message")
         print("  /models         - List all available models")
-        print("  /switch <model> - Switch to a different model")
+        print("  <model> - Switch to a different model")
         print("  clear           - Exit the application")
+        print("\nAvailable Models:")
+        for model in AVAILABLE_MODELS:
+            print(f"  - /switch {model}")
         return True, None
     return True, None
 
@@ -85,7 +102,7 @@ def interactive_mode():
     print("Type /help for available commands")
     print("─" * 50)
     
-    current_model = "gemini-2.0-flash"  # Set default model
+    current_model = DEFAULT_MODEL
     
     try:
         while True:
@@ -99,7 +116,9 @@ def interactive_mode():
                 if not should_continue:
                     print("\nGoodbye! 👋")
                     break
-                current_model = new_model or current_model
+                if new_model:
+                    current_model = new_model
+                    print(f"\n📌 Switched to model: {current_model}")
             elif question:
                 ask_question(question, current_model)
                 
