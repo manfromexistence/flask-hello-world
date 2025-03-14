@@ -3,6 +3,10 @@ import google.generativeai as genai_chat
 from google.genai import types
 from model_config import ModelManager
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class AIResponseGenerator:
     def __init__(self):
@@ -91,7 +95,14 @@ class AIResponseGenerator:
 generator = AIResponseGenerator()
 
 def generate_response(question: str, model_name: str = None) -> dict:
-    return generator.generate_response(question, model_name)
+    try:
+        return generator.generate_response(question, model_name)
+    except Exception as e:
+        logger.error(f"Error generating response: {str(e)}")
+        return {
+            "error": "Internal server error",
+            "details": str(e)
+        }
 
 if __name__ == "__main__":
     response = generate_response("What time it is at India currently?")
