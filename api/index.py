@@ -1,41 +1,38 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from main import generate_response
+import google.generativeai as genai
 import os
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Check if GEMINI_API_KEY is set
-if not os.environ.get("GEMINI_API_KEY"):
-    raise ValueError("GEMINI_API_KEY environment variable is not set")
+# Initialize Google AI
+try:
+    genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+    model = genai.GenerativeModel('gemini-pro')
+except Exception as e:
+    print(f"Error initializing Gemini: {e}")
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
-    return jsonify({
-        'status': 'ok',
-        'message': 'API is running'
-    })
-
-@app.route('/api/health')
-def health():
-    return jsonify({
-        'status': 'ok',
-        'api_key_set': bool(os.environ.get("GEMINI_API_KEY"))
-    })
+    return jsonify({"status": "ok", "message": "API is running"})
 
 @app.route('/api/ask', methods=['POST'])
-def ask_ai():
+def ask():
     try:
         data = request.get_json()
         if not data or 'question' not in data:
-            return jsonify({'error': 'Question is required'}), 400
-        
-        model = data.get('model')
-        response = generate_response(data['question'], model)
-        return jsonify(response)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+            return jsonify({"error": "Question is required"}), 400
 
+        response = model.generate_content(data['question'])
+        return jsonify({
+            "response": response.text,
+            "model_used": "gemini-pro"
+        })
+    except Exception as e:
+        print(f"Error processing request: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# For local development
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    app.run(port=3000)
